@@ -1,66 +1,69 @@
-    {
-        "$schema": "https://getcomposer.org/schema.json",
-        "name": "zuqongtech/laravel-kronos",
-        "type": "library",
-        "description": [],
-        "authors": [
-            {
-                "name": "gideonzozingao",
-                "email": "gideongzozingao@gmail.com"
+{
+    "$schema": "https://getcomposer.org/schema.json",
+    "name": "zuqongtech/laravel-kronos",
+    "type": "library",
+    "description": "A reactive workflow orchestration and scheduling engine for Laravel — rule-driven, DAG-based, multi-node safe.",
+    "authors": [
+        {
+            "name": "gideonzozingao",
+            "email": "gideongzozingao@gmail.com"
+        }
+    ],
+    "keywords": [
+        "laravel",
+        "scheduler",
+        "workflow",
+        "orchestration",
+        "dag",
+        "cron",
+        "rule-engine"
+    ],
+    "require": {
+        "php": "^8.2",
+        "laravel/framework": "^11.0|^12.0",
+        "symfony/yaml": "^7.0",
+        "illuminate/support": "^11.0|^12.0",
+        "illuminate/bus": "^11.0|^12.0",
+        "illuminate/queue": "^11.0|^12.0",
+        "illuminate/redis": "^11.0|^12.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.0|^10.0",
+        "pestphp/pest": "^2.0|^3.0",
+        "pestphp/pest-plugin-laravel": "^2.0|^3.0",
+        "filament/filament": "^3.0",
+        "mockery/mockery": "^1.6"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Zuqongtech\\LaravelKronos\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ZuqongTech\\Kronos\\Tests\\": "tests/"
+        }
+    },
+    "suggest": {
+        "filament/filament": "Required for the Kronos UI dashboard (^3.0)",
+        "predis/predis": "Required for Redis-backed distributed locking"
+    },
+    "config": {
+        "policy": {
+            "advisories": {
+                "block": false,
+                "ignore-id": [
+                    "PKSA-mdq4-51ck-6kdq",
+                    "PKSA-8qx3-n5y5-vvnd",
+                    "PKSA-q46n-4fdk-zjr4",
+                    "PKSA-qzrn-rnz3-85w1",
+                    "PKSA-w7xr-vk7n-rstm"
+                ]
             }
-        ],
-        "keywords": [
-            "laravel",
-            "scheduler",
-            "workflow",
-            "orchestration",
-            "dag",
-            "cron",
-            "rule-engine"
-        ],
-        "require": {
-            "php": "^8.2",
-            "laravel/framework": "^11.0|^12.0",
-            "symfony/yaml": "^7.0",
-            "illuminate/support": "^11.0|^12.0",
-            "illuminate/bus": "^11.0|^12.0",
-            "illuminate/queue": "^11.0|^12.0",
-            "illuminate/redis": "^11.0|^12.0"
         },
-        "require-dev": {
-            "orchestra/testbench": "^9.0",
-            "pestphp/pest": "^2.0",
-            "pestphp/pest-plugin-laravel": "^2.0",
-            "filament/filament": "^3.0",
-            "mockery/mockery": "^1.6"
-        },
-        "license": "MIT",
-        "autoload": {
-            "psr-4": {
-                "Zuqongtech\\LaravelKronos\\": "src/"
-            }
-        },
-        "autoload-dev": {
-            "psr-4": {
-                "ZuqongTech\\Kronos\\Tests\\": "tests/"
-            }
-        },
-        "suggest": {
-            "filament/filament": "Required for the Kronos UI dashboard (^3.0)",
-            "predis/predis": "Required for Redis-backed distributed locking"
-        },
-        "config": {
-            "policy": {
-                "advisories": {
-                    "block": false,
-                    "ignore-id": [
-                        "PKSA-mdq4-51ck-6kdq",
-                        "PKSA-8qx3-n5y5-vvnd",
-                        "PKSA-q46n-4fdk-zjr4",
-                        "PKSA-qzrn-rnz3-85w1",
-                        "PKSA-w7xr-vk7n-rstm"
-                    ]
-                }
-            }
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
         }
     }
+}
