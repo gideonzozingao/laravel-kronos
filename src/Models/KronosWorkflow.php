@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use ZuqongTech\Kronos\Database\Factories\KronosWorkflowFactory;
 
+/*
+**/
 class KronosWorkflow extends Model
 {
     use HasFactory; // Fix #21

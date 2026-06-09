@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ZuqongTech\Kronos\DAG;
 
 use Closure;
@@ -42,13 +44,13 @@ class StepDefinition
     {
         if (!class_exists($jobClass)) {
             throw new InvalidArgumentException(
-                "Step [{$this->name}]: job class [{$jobClass}] does not exist.",
+                sprintf('Step [%s]: job class [%s] does not exist.', $this->name, $jobClass),
             );
         }
 
         if (!is_a($jobClass, KronosStep::class, true)) {
             throw new InvalidArgumentException(
-                "Step [{$this->name}]: [{$jobClass}] must implement ".KronosStep::class.'.',
+                sprintf('Step [%s]: [%s] must implement ', $this->name, $jobClass).KronosStep::class.'.',
             );
         }
 

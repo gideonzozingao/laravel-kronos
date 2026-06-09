@@ -57,7 +57,7 @@ class KronosWorkflowFactory extends Factory
     /** Create a workflow with a given set of step configs. */
     public function withSteps(array $steps): static
     {
-        return $this->state(fn ($attrs) => [
+        return $this->state(fn ($attrs): array => [
             'definition' => array_merge($attrs['definition'], ['steps' => $steps]),
         ]);
     }

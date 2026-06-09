@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ZuqongTech\Kronos;
 
 use ZuqongTech\Kronos\DAG\WorkflowDefinition;
@@ -26,10 +28,10 @@ class Kronos
      */
     public function rule(string $name): KronosRule
     {
-        $rule = new KronosRule($name, $this->ruleEngine, $this->writer);
-        $this->ruleEngine->register($rule);
+        $kronosRule = new KronosRule($name, $this->ruleEngine, $this->writer);
+        $this->ruleEngine->register($kronosRule);
 
-        return $rule;
+        return $kronosRule;
     }
 
     /**

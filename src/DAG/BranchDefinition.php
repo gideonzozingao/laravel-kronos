@@ -17,10 +17,10 @@ class BranchDefinition
      */
     public function when(Closure $condition): BranchArm
     {
-        $arm = new BranchArm($condition, $this);
-        $this->arms[] = $arm;
+        $branchArm = new BranchArm($condition, $this);
+        $this->arms[] = $branchArm;
 
-        return $arm;
+        return $branchArm;
     }
 
     /**
@@ -28,11 +28,11 @@ class BranchDefinition
      */
     public function otherwise(): BranchArm
     {
-        $arm = new BranchArm(fn () => true, $this, isDefault: true);
+        $branchArm = new BranchArm(fn (): true => true, $this, isDefault: true);
         $this->otherwiseSteps = [];
-        $this->arms[] = $arm;
+        $this->arms[] = $branchArm;
 
-        return $arm;
+        return $branchArm;
     }
 
     /**
@@ -51,7 +51,7 @@ class BranchDefinition
     public function toArray(): array
     {
         return [
-            'arms' => array_map(fn (BranchArm $arm) => $arm->toArray(), $this->arms),
+            'arms' => array_map(fn (BranchArm $branchArm) => $branchArm->toArray(), $this->arms),
         ];
     }
 }

@@ -21,7 +21,7 @@ describe('KronosRuleEngine', function (): void {
     it('dispatches RebuildKronosConfig when a matching rule evaluates', function (): void {
         Bus::fake();
 
-        $engine = app(KronosRuleEngine::class);
+        $kronosRuleEngine = app(KronosRuleEngine::class);
 
         $model = new class extends Model
         {
@@ -30,14 +30,14 @@ describe('KronosRuleEngine', function (): void {
             public bool $is_enabled = true;
         };
 
-        $writer = Mockery::mock(KronosConfigWriter::class);
+        $mock = Mockery::mock(KronosConfigWriter::class);
         $rule = Mockery::mock(KronosRule::class);
         $rule->shouldReceive('getWatchEvents')->andReturn(['updated']);
         $rule->shouldReceive('evaluate')->with($model)->andReturn(true);
         $rule->name = 'test_rule';
 
-        $engine->register($rule);
-        $engine->evaluate($model, 'updated');
+        $kronosRuleEngine->register($rule);
+        $kronosRuleEngine->evaluate($model, 'updated');
 
         Bus::assertDispatched(RebuildKronosConfig::class);
     });
@@ -45,10 +45,10 @@ describe('KronosRuleEngine', function (): void {
     it('does not dispatch when no rules match', function (): void {
         Bus::fake();
 
-        $engine = app(KronosRuleEngine::class);
+        $kronosRuleEngine = app(KronosRuleEngine::class);
         $model = new Model;
 
-        $engine->evaluate($model, 'updated');
+        $kronosRuleEngine->evaluate($model, 'updated');
 
         Bus::assertNotDispatched(RebuildKronosConfig::class);
     });
@@ -57,7 +57,7 @@ describe('KronosRuleEngine', function (): void {
         Bus::fake();
 
         $engine = new KronosRuleEngine;
-        $writer = Mockery::mock(KronosConfigWriter::class);
+        $mock = Mockery::mock(KronosConfigWriter::class);
         $rule = Mockery::mock(KronosRule::class);
         $rule->shouldReceive('getWatchEvents')->andReturn(['created']); // only watches created
         $rule->shouldReceive('evaluate')->never();

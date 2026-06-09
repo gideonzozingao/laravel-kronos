@@ -15,13 +15,13 @@ class KronosStatusCommand extends Command
     {
         if ($runId = $this->argument('run_id')) {
             $run = KronosWorkflowRun::where('run_id', $runId)->with(['workflow', 'stepRuns'])->firstOrFail();
-            $this->info("Workflow: {$run->workflow->name} | Status: {$run->status->value}");
-            $this->table(['Step', 'Status', 'Attempt', 'Duration'], $run->stepRuns->map(fn ($s) => [
+            $this->info(sprintf('Workflow: %s | Status: %s', $run->workflow->name, $run->status->value));
+            $this->table(['Step', 'Status', 'Attempt', 'Duration'], $run->stepRuns->map(fn ($s): array => [
                 $s->step_name, $s->status->value, $s->attempt, $s->duration ? $s->duration.'s' : '-',
             ]));
         } else {
             $runs = KronosWorkflowRun::with('workflow')->latest()->limit(20)->get();
-            $this->table(['Run ID', 'Workflow', 'Status', 'Started'], $runs->map(fn ($r) => [
+            $this->table(['Run ID', 'Workflow', 'Status', 'Started'], $runs->map(fn ($r): array => [
                 $r->run_id, $r->workflow->name, $r->status->value, $r->started_at?->diffForHumans(),
             ]));
         }

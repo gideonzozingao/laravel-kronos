@@ -64,7 +64,7 @@ describe('DAGResolver', function (): void {
             'step_c' => ['depends_on' => ['step_b']],
         ];
 
-        expect(fn () => $resolver->resolve($steps))
+        expect(fn (): array => $resolver->resolve($steps))
             ->toThrow(KronosDeadlockException::class);
     });
 

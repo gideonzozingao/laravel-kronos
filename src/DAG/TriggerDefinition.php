@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ZuqongTech\Kronos\DAG;
 
 class TriggerDefinition

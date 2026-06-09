@@ -36,8 +36,8 @@ describe('KronosOrchestrator', function (): void {
             ->withSteps(twoStepDefinition()['steps'])
             ->create(['name' => 'two_step_workflow']);
 
-        $orchestrator = app(KronosOrchestrator::class);
-        $runId = $orchestrator->trigger('two_step_workflow');
+        $kronosOrchestrator = app(KronosOrchestrator::class);
+        $runId = $kronosOrchestrator->trigger('two_step_workflow');
 
         expect($runId)->toBeString()->not->toBeEmpty();
 
@@ -48,13 +48,13 @@ describe('KronosOrchestrator', function (): void {
         // step_one has no deps — should be dispatched
         Bus::assertDispatched(
             ExecuteWorkflowStep::class,
-            fn ($job) => $job->stepName === 'step_one' && $job->runId === $run->id,
+            fn ($job): bool => $job->stepName === 'step_one' && $job->runId === $run->id,
         );
 
         // step_two depends on step_one — must NOT be dispatched yet
         Bus::assertNotDispatched(
             ExecuteWorkflowStep::class,
-            fn ($job) => $job->stepName === 'step_two',
+            fn ($job): bool => $job->stepName === 'step_two',
         );
     });
 
@@ -84,11 +84,11 @@ describe('KronosOrchestrator', function (): void {
             ->withSteps($singleStep)
             ->create(['name' => 'single_step_workflow']);
 
-        $orchestrator = app(KronosOrchestrator::class);
-        $runId = $orchestrator->trigger('single_step_workflow');
+        $kronosOrchestrator = app(KronosOrchestrator::class);
+        $runId = $kronosOrchestrator->trigger('single_step_workflow');
         $run = KronosWorkflowRun::where('run_id', $runId)->first();
 
-        $orchestrator->onStepCompleted($run->fresh(), 'only_step', ['result' => 'ok']);
+        $kronosOrchestrator->onStepCompleted($run->fresh(), 'only_step', ['result' => 'ok']);
 
         expect($run->fresh()->status)->toBe(RunStatus::Completed);
         Event::assertDispatched(WorkflowCompleted::class);
@@ -102,11 +102,11 @@ describe('KronosOrchestrator', function (): void {
             ->withSteps(twoStepDefinition()['steps'])
             ->create(['name' => 'failing_workflow']);
 
-        $orchestrator = app(KronosOrchestrator::class);
-        $runId = $orchestrator->trigger('failing_workflow');
+        $kronosOrchestrator = app(KronosOrchestrator::class);
+        $runId = $kronosOrchestrator->trigger('failing_workflow');
         $run = KronosWorkflowRun::where('run_id', $runId)->first();
 
-        $orchestrator->onStepFailed($run->fresh(), 'step_one', 'Something exploded', false);
+        $kronosOrchestrator->onStepFailed($run->fresh(), 'step_one', 'Something exploded', false);
 
         expect($run->fresh()->status)->toBe(RunStatus::Failed);
         Event::assertDispatched(WorkflowFailed::class);
@@ -119,11 +119,11 @@ describe('KronosOrchestrator', function (): void {
             ->withSteps(twoStepDefinition()['steps'])
             ->create(['name' => 'cancel_test']);
 
-        $orchestrator = app(KronosOrchestrator::class);
-        $runId = $orchestrator->trigger('cancel_test');
+        $kronosOrchestrator = app(KronosOrchestrator::class);
+        $runId = $kronosOrchestrator->trigger('cancel_test');
         $run = KronosWorkflowRun::where('run_id', $runId)->first();
 
-        $orchestrator->cancel($run->fresh(), 'Test cancellation');
+        $kronosOrchestrator->cancel($run->fresh(), 'Test cancellation');
 
         $refreshed = $run->fresh();
         expect($refreshed->status)->toBe(RunStatus::Cancelled)

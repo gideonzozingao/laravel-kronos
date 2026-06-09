@@ -27,7 +27,7 @@ class KronosConfigWriter
 
             $workflows = KronosWorkflow::where('enabled', true)
                 ->get()
-                ->map(fn ($wf) => array_merge($wf->definition, [
+                ->map(fn ($wf): array => array_merge($wf->definition, [
                     'id' => $wf->id,
                     'name' => $wf->name,
                     'enabled' => $wf->enabled,
@@ -84,7 +84,7 @@ class KronosConfigWriter
         $config = $this->loadCurrent();
 
         $config['schedules'] = collect($config['schedules'] ?? [])
-            ->reject(fn ($s) => ($s['id'] ?? null) == $id)
+            ->reject(fn ($s): bool => ($s['id'] ?? null) == $id)
             ->values()
             ->toArray();
 

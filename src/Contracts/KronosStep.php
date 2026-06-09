@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ZuqongTech\Kronos\Contracts;
 
 use ZuqongTech\Kronos\DAG\WorkflowContext;
@@ -14,5 +16,5 @@ interface KronosStep
      *
      * Return an array to store as step output, or void.
      */
-    public function handle(WorkflowContext $context): ?array;
+    public function handle(WorkflowContext $workflowContext): ?array;
 }

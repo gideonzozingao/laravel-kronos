@@ -17,7 +17,7 @@ class KronosCancelCommand extends Command
 
     protected $description = 'Cancel a running or pending Kronos workflow run';
 
-    public function handle(KronosOrchestrator $orchestrator): int
+    public function handle(KronosOrchestrator $kronosOrchestrator): int
     {
         $runId = $this->argument('run_id');
         $reason = $this->option('reason') ?? 'Cancelled via kronos:cancel';
@@ -25,20 +25,20 @@ class KronosCancelCommand extends Command
         $run = KronosWorkflowRun::where('run_id', $runId)->first();
 
         if (!$run) {
-            $this->error("No workflow run found with ID [{$runId}].");
+            $this->error(sprintf('No workflow run found with ID [%s].', $runId));
 
             return self::FAILURE;
         }
 
         if ($run->isTerminal()) {
-            $this->warn("Run [{$runId}] is already in a terminal state ({$run->status->value}). Nothing to cancel.");
+            $this->warn(sprintf('Run [%s] is already in a terminal state (%s). Nothing to cancel.', $runId, $run->status->value));
 
             return self::SUCCESS;
         }
 
-        $orchestrator->cancel($run, $reason);
+        $kronosOrchestrator->cancel($run, $reason);
 
-        $this->info("✔ Run [{$runId}] cancelled.");
+        $this->info(sprintf('✔ Run [%s] cancelled.', $runId));
 
         return self::SUCCESS;
     }

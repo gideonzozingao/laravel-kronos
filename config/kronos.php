@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 return [
 
     /*
@@ -86,5 +88,43 @@ return [
     | unless overridden per-entry.
     */
     'timezone' => env('KRONOS_TIMEZONE', config('app.timezone', 'UTC')),
+    /*
+    |--------------------------------------------------------------------------
+    | ReactPHP Daemon
+    |--------------------------------------------------------------------------
+    | When enabled, the ReactPHP daemon replaces crontab-based scheduling
+    | with a persistent event-loop process. Start it with:
+    |   php artisan kronos:daemon
+    |
+    | Run EXACTLY ONE daemon instance per deployment. Do not run alongside
+    | `schedule:run` — they will double-fire every cron entry.
+    */
+    'reactphp' => [
+
+        // Master switch — enables daemon mode and disables native scheduler hydration
+        'enabled' => env('KRONOS_REACTPHP_ENABLED', false),
+
+        'websocket' => [
+            // Enable the WebSocket server for live Filament dashboard updates
+            'enabled' => env('KRONOS_WS_ENABLED', false),
+
+            // Port the WebSocket server listens on
+            'port' => env('KRONOS_WS_PORT', 6001),
+
+            // Allowed origins for WebSocket connections (null = allow all)
+            'allowed_origins' => env('KRONOS_WS_ORIGINS'),
+        ],
+
+        'scheduler' => [
+            // Tick interval in seconds — how often to evaluate due cron entries
+            // Default 1.0 gives sub-minute precision
+            'tick_interval' => (float) env('KRONOS_SCHEDULER_TICK', 1.0),
+
+            // Backstop config reload interval in seconds
+            // The Redis subscriber is the primary reload mechanism;
+            // this is a fallback for missed pub/sub messages
+            'reload_interval' => (float) env('KRONOS_SCHEDULER_RELOAD', 60.0),
+        ],
+    ],
 
 ];

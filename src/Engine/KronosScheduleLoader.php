@@ -73,7 +73,7 @@ class KronosScheduleLoader
             })
                 ->cron($trigger['cron_expression'])
                 ->timezone($trigger['timezone'] ?? 'UTC')
-                ->name("kronos:workflow:{$workflow['name']}");
+                ->name('kronos:workflow:'.$workflow['name']);
 
             if (config('kronos.multi_node', false)) {
                 $event->onOneServer();
@@ -91,7 +91,7 @@ class KronosScheduleLoader
         // Try Redis first (multi-node canonical store)
         try {
             $fromRedis = $this->redis->load();
-            if (!empty($fromRedis)) {
+            if ($fromRedis !== []) {
                 return $fromRedis;
             }
         } catch (Throwable) {

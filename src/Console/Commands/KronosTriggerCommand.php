@@ -11,7 +11,7 @@ class KronosTriggerCommand extends Command
 
     protected $description = 'Manually trigger a Kronos workflow';
 
-    public function handle(KronosOrchestrator $orchestrator): int
+    public function handle(KronosOrchestrator $kronosOrchestrator): int
     {
         $name = $this->argument('workflow');
         $context = [];
@@ -20,11 +20,11 @@ class KronosTriggerCommand extends Command
             $context = json_decode($raw, true) ?? [];
         }
 
-        $this->info("Triggering workflow: <comment>{$name}</comment>");
+        $this->info(sprintf('Triggering workflow: <comment>%s</comment>', $name));
 
-        $runId = $orchestrator->trigger($name, $context);
+        $runId = $kronosOrchestrator->trigger($name, $context);
 
-        $this->info("✔ Workflow run dispatched. Run ID: <comment>{$runId}</comment>");
+        $this->info(sprintf('✔ Workflow run dispatched. Run ID: <comment>%s</comment>', $runId));
 
         return self::SUCCESS;
     }

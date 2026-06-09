@@ -12,9 +12,9 @@ class KronosRuleEngine
     protected array $rules = [];
 
     /** Register a rule with the engine. */
-    public function register(KronosRule $rule): void
+    public function register(KronosRule $kronosRule): void
     {
-        $this->rules[$rule->name] = $rule;
+        $this->rules[$kronosRule->name] = $kronosRule;
     }
 
     /**
@@ -29,6 +29,7 @@ class KronosRuleEngine
             if (!in_array($event, $rule->getWatchEvents())) {
                 continue;
             }
+
             if ($rule->evaluate($model)) {
                 $matched = true;
                 break;
@@ -45,7 +46,7 @@ class KronosRuleEngine
     {
         return array_filter(
             $this->rules,
-            fn (KronosRule $rule) => $rule->getModelClass() === $modelClass,
+            fn (KronosRule $kronosRule): bool => $kronosRule->getModelClass() === $modelClass,
         );
     }
 
@@ -86,6 +87,6 @@ class KronosRuleEngine
             });
         }
 
-        return compact('schedules', 'workflows');
+        return ['schedules' => $schedules, 'workflows' => $workflows];
     }
 }

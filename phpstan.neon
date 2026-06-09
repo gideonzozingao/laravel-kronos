@@ -1,3 +1,8 @@
 parameters:
+    paths:
+        - src
+        - tests
+        - config
+        - routes
     level: 5
     treatPhpDocTypesAsCertain: false

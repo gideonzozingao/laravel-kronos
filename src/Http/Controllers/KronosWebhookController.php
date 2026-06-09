@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Throwable;
 use ZuqongTech\Kronos\Engine\KronosOrchestrator;
 use ZuqongTech\Kronos\Models\KronosWorkflowRun;
 
@@ -31,8 +32,8 @@ class KronosWebhookController extends Controller
         try {
             $runId = $this->orchestrator->trigger($workflow, $context);
         } catch (ModelNotFoundException) {
-            return response()->json(['error' => "Workflow [{$workflow}] not found or disabled."], 404);
-        } catch (\Throwable $e) {
+            return response()->json(['error' => sprintf('Workflow [%s] not found or disabled.', $workflow)], 404);
+        } catch (Throwable $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
 
@@ -70,7 +71,7 @@ class KronosWebhookController extends Controller
             'finished_at' => $run->finished_at?->toIso8601String(),
             'duration' => $run->duration,
             'context' => $run->context,
-            'steps' => $run->stepRuns->map(fn ($s) => [
+            'steps' => $run->stepRuns->map(fn ($s): array => [
                 'name' => $s->step_name,
                 'status' => $s->status->value,
                 'attempt' => $s->attempt,

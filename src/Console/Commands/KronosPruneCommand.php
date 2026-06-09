@@ -33,7 +33,7 @@ class KronosPruneCommand extends Command
         $scheduleRuns = KronosScheduleRun::where('created_at', '<', $cutoff)->count();
         KronosScheduleRun::where('created_at', '<', $cutoff)->delete();
 
-        $this->info("✔ Pruned {$workflowRuns} workflow run(s) and {$scheduleRuns} schedule run(s) older than {$days} day(s).");
+        $this->info(sprintf('✔ Pruned %s workflow run(s) and %s schedule run(s) older than %d day(s).', $workflowRuns, $scheduleRuns, $days));
 
         return self::SUCCESS;
     }

@@ -17,17 +17,20 @@ use ZuqongTech\Kronos\Jobs\ExecuteWorkflowStep;
 use ZuqongTech\Kronos\Models\KronosStepRun;
 use ZuqongTech\Kronos\Models\KronosWorkflow;
 use ZuqongTech\Kronos\Models\KronosWorkflowRun;
+use ZuqongTech\Kronos\ReactPHP\Broadcast\RunBroadcaster;
 
 class KronosOrchestrator
 {
-    public function __construct(protected DAGResolver $dag) {}
+    public function __construct(
+        protected DAGResolver $dag,
+        protected ?RunBroadcaster $broadcaster = null,
+    ) {}
 
     /**
      * Create and begin a new workflow run.
      */
     public function trigger(string $workflowName, array $context = []): string
     {
-        // Fix #18: eager-load workflow once at entry point
         $workflow = KronosWorkflow::where('name', $workflowName)
             ->where('enabled', true)
             ->firstOrFail();
@@ -40,10 +43,8 @@ class KronosOrchestrator
             'started_at' => now(),
         ]);
 
-        // Associate the already-loaded workflow to avoid a re-query
         $run->setRelation('workflow', $workflow);
 
-        // Seed step records as pending
         foreach ($workflow->definition['steps'] ?? [] as $step) {
             KronosStepRun::create([
                 'workflow_run_id' => $run->id,
@@ -55,6 +56,9 @@ class KronosOrchestrator
 
         $run->update(['status' => RunStatus::Running]);
 
+        // Broadcast workflow start to WebSocket clients
+        $this->broadcaster?->workflowUpdated($run, RunStatus::Running->value);
+
         $this->advance($run);
 
         return $run->run_id;
@@ -62,32 +66,28 @@ class KronosOrchestrator
 
     /**
      * Advance the workflow — dispatch all steps whose dependencies are met.
-     * Protected by a distributed Redis lock to prevent concurrent advancement.
-     *
-     * Fix #6: $run is refreshed inside the lock to prevent stale in-memory state.
+     * Protected by a distributed Redis lock.
      */
-    public function advance(KronosWorkflowRun $run): void
+    public function advance(KronosWorkflowRun $kronosWorkflowRun): void
     {
-        $lock = Cache::lock("kronos:run:{$run->id}:advance", 30);
+        $lock = Cache::lock(sprintf('kronos:run:%s:advance', $kronosWorkflowRun->id), 30);
 
-        $lock->block(10, function () use ($run): void {
-            // Fix #6: refresh inside the lock — another process may have mutated this
-            $run->refresh();
+        $lock->block(10, function () use ($kronosWorkflowRun): void {
+            $kronosWorkflowRun->refresh();
 
-            if ($run->isTerminal()) {
+            if ($kronosWorkflowRun->isTerminal()) {
                 return;
             }
 
-            // Fix #18: load workflow once, reuse throughout this call
-            $workflow = $run->workflow;
+            $workflow = $kronosWorkflowRun->workflow;
             $steps = $workflow->definition['steps'] ?? [];
 
-            $completed = $run->stepRuns()
+            $completed = $kronosWorkflowRun->stepRuns()
                 ->whereIn('status', [StepStatus::Completed->value, StepStatus::Skipped->value])
                 ->pluck('step_name')
                 ->toArray();
 
-            $running = $run->stepRuns()
+            $running = $kronosWorkflowRun->stepRuns()
                 ->where('status', StepStatus::Running->value)
                 ->pluck('step_name')
                 ->toArray();
@@ -98,31 +98,38 @@ class KronosOrchestrator
                     $completed,
                     $running,
                 );
-            } catch (KronosDeadlockException $e) {
-                $run->update([
+            } catch (KronosDeadlockException $kronosDeadlockException) {
+                $kronosWorkflowRun->update([
                     'status' => RunStatus::Failed,
                     'finished_at' => now(),
-                    'error' => $e->getMessage(),
+                    'error' => $kronosDeadlockException->getMessage(),
                 ]);
-                event(new WorkflowFailed($run, $e->getMessage()));
+                event(new WorkflowFailed($kronosWorkflowRun, $kronosDeadlockException->getMessage()));
+                $this->broadcaster?->workflowUpdated($kronosWorkflowRun, RunStatus::Failed->value, [
+                    'error' => $kronosDeadlockException->getMessage(),
+                ]);
 
                 return;
             }
 
-            if (empty($ready) && empty($running)) {
-                $pending = $run->stepRuns()
+            if ($ready === [] && empty($running)) {
+                $pending = $kronosWorkflowRun->stepRuns()
                     ->where('status', StepStatus::Pending->value)
                     ->count();
 
                 if ($pending === 0) {
-                    $this->markComplete($run);
+                    $this->markComplete($kronosWorkflowRun);
                 } else {
-                    $run->update([
+                    $error = 'Workflow stalled — no ready steps with pending steps remaining.';
+                    $kronosWorkflowRun->update([
                         'status' => RunStatus::Failed,
                         'finished_at' => now(),
-                        'error' => 'Workflow stalled — no ready steps with pending steps remaining.',
+                        'error' => $error,
                     ]);
-                    event(new WorkflowFailed($run, 'Workflow stalled.'));
+                    event(new WorkflowFailed($kronosWorkflowRun, 'Workflow stalled.'));
+                    $this->broadcaster?->workflowUpdated($kronosWorkflowRun, RunStatus::Failed->value, [
+                        'error' => $error,
+                    ]);
                 }
 
                 return;
@@ -133,29 +140,29 @@ class KronosOrchestrator
             foreach ($ready as $stepName) {
                 $stepConfig = $stepIndex->get($stepName);
 
-                // Evaluate skip condition against context
                 if ($condition = ($stepConfig['condition'] ?? null)) {
-                    $ctx = new WorkflowContext($run);
+                    $ctx = new WorkflowContext($kronosWorkflowRun);
                     if (!$ctx->get($condition)) {
-                        $run->stepRuns()
+                        $kronosWorkflowRun->stepRuns()
                             ->where('step_name', $stepName)
                             ->update(['status' => StepStatus::Skipped->value]);
+                        $this->broadcaster?->stepUpdated($kronosWorkflowRun, $stepName, StepStatus::Skipped->value);
 
                         continue;
                     }
                 }
 
-                // Mark running before dispatch — prevents double-dispatch
-                $run->stepRuns()
+                $kronosWorkflowRun->stepRuns()
                     ->where('step_name', $stepName)
                     ->update([
                         'status' => StepStatus::Running->value,
                         'started_at' => now(),
                     ]);
 
-                // Fix #2: pass tries/backoff/timeout at dispatch time
+                $this->broadcaster?->stepUpdated($kronosWorkflowRun, $stepName, StepStatus::Running->value);
+
                 dispatch(new ExecuteWorkflowStep(
-                    runId: $run->id,
+                    runId: $kronosWorkflowRun->id,
                     stepName: $stepName,
                     tries: $stepConfig['retries'] ?? 1,
                     backoff: $stepConfig['retry_delay'] ?? 60,
@@ -168,9 +175,9 @@ class KronosOrchestrator
     /**
      * Called by ExecuteWorkflowStep on success.
      */
-    public function onStepCompleted(KronosWorkflowRun $run, string $stepName, array $output = []): void
+    public function onStepCompleted(KronosWorkflowRun $kronosWorkflowRun, string $stepName, array $output = []): void
     {
-        $run->stepRuns()
+        $kronosWorkflowRun->stepRuns()
             ->where('step_name', $stepName)
             ->update([
                 'status' => StepStatus::Completed->value,
@@ -178,29 +185,33 @@ class KronosOrchestrator
                 'finished_at' => now(),
             ]);
 
-        event(new WorkflowStepCompleted($run, $stepName));
+        event(new WorkflowStepCompleted($kronosWorkflowRun, $stepName));
+        $this->broadcaster?->stepUpdated($kronosWorkflowRun, $stepName, StepStatus::Completed->value, [
+            'output' => $output,
+        ]);
 
-        $this->advance($run);
+        $this->advance($kronosWorkflowRun);
     }
 
     /**
      * Called by ExecuteWorkflowStep on failure.
      */
     public function onStepFailed(
-        KronosWorkflowRun $run,
+        KronosWorkflowRun $kronosWorkflowRun,
         string $stepName,
         string $error,
         bool $willRetry = false,
     ): void {
         if ($willRetry) {
-            $run->stepRuns()
+            $kronosWorkflowRun->stepRuns()
                 ->where('step_name', $stepName)
                 ->increment('attempt');
+            $this->broadcaster?->stepUpdated($kronosWorkflowRun, $stepName, 'retrying', ['error' => $error]);
 
             return;
         }
 
-        $run->stepRuns()
+        $kronosWorkflowRun->stepRuns()
             ->where('step_name', $stepName)
             ->update([
                 'status' => StepStatus::Failed->value,
@@ -208,61 +219,65 @@ class KronosOrchestrator
                 'finished_at' => now(),
             ]);
 
-        event(new WorkflowStepFailed($run, $stepName, $error));
+        event(new WorkflowStepFailed($kronosWorkflowRun, $stepName, $error));
+        $this->broadcaster?->stepUpdated($kronosWorkflowRun, $stepName, StepStatus::Failed->value, [
+            'error' => $error,
+        ]);
 
-        // Fix #18: load workflow once via local var
-        $workflow = $run->workflow;
+        $workflow = $kronosWorkflowRun->workflow;
 
         if ($workflow->definition['stop_on_failure'] ?? true) {
-            $run->update([
+            $kronosWorkflowRun->update([
                 'status' => RunStatus::Failed,
                 'finished_at' => now(),
-                'error' => "Step [{$stepName}] failed: {$error}",
+                'error' => sprintf('Step [%s] failed: %s', $stepName, $error),
             ]);
-            event(new WorkflowFailed($run, "Step [{$stepName}] failed."));
+            event(new WorkflowFailed($kronosWorkflowRun, sprintf('Step [%s] failed.', $stepName)));
+            $this->broadcaster?->workflowUpdated($kronosWorkflowRun, RunStatus::Failed->value, [
+                'failed_step' => $stepName,
+            ]);
         } else {
-            $this->advance($run);
+            $this->advance($kronosWorkflowRun);
         }
     }
 
     /**
      * Cancel a running workflow run.
-     * Fix #23: cancellation support.
      */
-    public function cancel(KronosWorkflowRun $run, string $reason = 'Cancelled by operator'): void
+    public function cancel(KronosWorkflowRun $kronosWorkflowRun, string $reason = 'Cancelled by operator'): void
     {
-        if ($run->isTerminal()) {
+        if ($kronosWorkflowRun->isTerminal()) {
             return;
         }
 
-        $run->update([
+        $kronosWorkflowRun->update([
             'status' => RunStatus::Cancelled,
             'finished_at' => now(),
             'error' => $reason,
         ]);
 
-        // Mark any pending/running steps as skipped
-        $run->stepRuns()
+        $kronosWorkflowRun->stepRuns()
             ->whereIn('status', [StepStatus::Pending->value, StepStatus::Running->value])
             ->update(['status' => StepStatus::Skipped->value]);
+
+        $this->broadcaster?->workflowUpdated($kronosWorkflowRun, RunStatus::Cancelled->value, [
+            'reason' => $reason,
+        ]);
     }
 
-    protected function markComplete(KronosWorkflowRun $run): void
+    protected function markComplete(KronosWorkflowRun $kronosWorkflowRun): void
     {
-        $run->update([
+        $kronosWorkflowRun->update([
             'status' => RunStatus::Completed,
             'finished_at' => now(),
         ]);
 
-        event(new WorkflowCompleted($run));
+        event(new WorkflowCompleted($kronosWorkflowRun));
+        $this->broadcaster?->workflowUpdated($kronosWorkflowRun, RunStatus::Completed->value);
 
-        $this->triggerDependentWorkflows($run->workflow->name);
+        $this->triggerDependentWorkflows($kronosWorkflowRun->workflow->name);
     }
 
-    /**
-     * Fix #8: store after_workflow as a plain string scalar in TriggerDefinition,
-     * so query here uses a JSON value match instead of whereJsonContains (array).
-     */
     protected function triggerDependentWorkflows(string $completedWorkflowName): void
     {
         KronosWorkflow::where('enabled', true)
@@ -270,6 +285,6 @@ class KronosOrchestrator
                 "JSON_EXTRACT(definition, '$.trigger.after_workflow') = ?",
                 [$completedWorkflowName],
             )
-            ->each(fn ($workflow) => $this->trigger($workflow->name));
+            ->each(fn ($workflow): string => $this->trigger($workflow->name));
     }
 }

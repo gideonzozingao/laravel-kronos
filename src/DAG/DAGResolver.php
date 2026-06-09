@@ -32,10 +32,10 @@ class DAGResolver
 
         // Collect all zero-degree nodes as the first batch
         $batches = [];
-        $queue = array_keys(array_filter($inDegree, fn ($deg) => $deg === 0));
+        $queue = array_keys(array_filter($inDegree, fn (int $deg): bool => $deg === 0));
         $processed = 0;
 
-        while (!empty($queue)) {
+        while ($queue !== []) {
             $batches[] = $queue;
             $nextQueue = [];
 
@@ -54,7 +54,7 @@ class DAGResolver
 
         // If not all nodes processed, there is a cycle
         if ($processed !== count($steps)) {
-            $cycle = array_keys(array_filter($inDegree, fn ($deg) => $deg > 0));
+            $cycle = array_keys(array_filter($inDegree, fn (int $deg): bool => $deg > 0));
             throw new KronosDeadlockException(
                 'Circular dependency detected in workflow DAG. Affected steps: '.implode(', ', $cycle),
             );
@@ -83,7 +83,7 @@ class DAGResolver
 
             // Check all dependencies are completed
             $deps = $step['depends_on'] ?? [];
-            if (empty(array_diff($deps, $completedSteps))) {
+            if (array_diff($deps, $completedSteps) === []) {
                 $ready[] = $name;
             }
         }

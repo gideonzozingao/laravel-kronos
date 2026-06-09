@@ -39,10 +39,10 @@ class WorkflowDefinition
     /** Add a step to the workflow. */
     public function step(string $name): StepDefinition
     {
-        $step = new StepDefinition($name, $this);
-        $this->steps[$name] = $step;
+        $stepDefinition = new StepDefinition($name, $this);
+        $this->steps[$name] = $stepDefinition;
 
-        return $step;
+        return $stepDefinition;
     }
 
     /** Add parallel steps — all run concurrently, next step waits for all. */
@@ -58,10 +58,10 @@ class WorkflowDefinition
     /** Open a conditional branch. */
     public function branch(): BranchDefinition
     {
-        $branch = new BranchDefinition($this);
-        $this->branches[] = $branch;
+        $branchDefinition = new BranchDefinition($this);
+        $this->branches[] = $branchDefinition;
 
-        return $branch;
+        return $branchDefinition;
     }
 
     /** Set callback for workflow-level failure. */
@@ -121,11 +121,11 @@ class WorkflowDefinition
             'stop_on_failure' => $this->stopOnFailure,
             'trigger' => $this->trigger->toArray(),
             'steps' => array_map(
-                fn (StepDefinition $step) => $step->toArray(),
+                fn (StepDefinition $stepDefinition): array => $stepDefinition->toArray(),
                 $this->steps,
             ),
             'branches' => array_map(
-                fn (BranchDefinition $branch) => $branch->toArray(),
+                fn (BranchDefinition $branchDefinition): array => $branchDefinition->toArray(),
                 $this->branches,
             ),
         ];

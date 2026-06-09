@@ -1,5 +1,9 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ZuqongTech\Kronos\Exceptions;
 
-class KronosDeadlockException extends \RuntimeException {}
+use RuntimeException;
+
+class KronosDeadlockException extends RuntimeException {}

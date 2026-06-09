@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ZuqongTech\Kronos\Jobs;
 
 use Illuminate\Bus\Queueable;
@@ -11,7 +13,9 @@ use ZuqongTech\Kronos\Writers\KronosConfigWriter;
 
 class RebuildKronosConfig implements ShouldBeUnique, ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
 
     /**
      * Unique key — all rebuild requests collapse into a single job execution.
@@ -28,8 +32,8 @@ class RebuildKronosConfig implements ShouldBeUnique, ShouldQueue
      */
     public int $uniqueFor = 10;
 
-    public function handle(KronosConfigWriter $writer): void
+    public function handle(KronosConfigWriter $kronosConfigWriter): void
     {
-        $writer->rebuildFromDatabase();
+        $kronosConfigWriter->rebuildFromDatabase();
     }
 }

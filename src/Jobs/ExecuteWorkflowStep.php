@@ -17,11 +17,12 @@ use ZuqongTech\Kronos\Models\KronosWorkflowRun;
 
 class ExecuteWorkflowStep implements ShouldBeUnique, ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
-    public function __construct(public readonly int $runId, public readonly string $stepName, public int $tries = 1, public int $backoff = 60, public int $timeout = 3600)
-    {
-    }
+    public function __construct(public readonly int $runId, public readonly string $stepName, public int $tries = 1, public int $backoff = 60, public int $timeout = 3600) {}
 
     /**
      * Unique key — prevents the same step from being dispatched twice
@@ -29,64 +30,64 @@ class ExecuteWorkflowStep implements ShouldBeUnique, ShouldQueue
      */
     public function uniqueId(): string
     {
-        return "kronos:step:{$this->runId}:{$this->stepName}";
+        return sprintf('kronos:step:%d:%s', $this->runId, $this->stepName);
     }
 
-    public function handle(KronosOrchestrator $orchestrator): void
+    public function handle(KronosOrchestrator $kronosOrchestrator): void
     {
-        $run = KronosWorkflowRun::with('workflow')->findOrFail($this->runId);
+        $kronosWorkflowRun = KronosWorkflowRun::with('workflow')->findOrFail($this->runId);
 
         // Re-check status — guard against race between dispatch and handle
-        $stepRun = $run->stepRuns()->where('step_name', $this->stepName)->first();
+        $stepRun = $kronosWorkflowRun->stepRuns()->where('step_name', $this->stepName)->first();
         if (!$stepRun || $stepRun->status === StepStatus::Completed) {
             return;
         }
 
-        $steps = $run->workflow->definition['steps'] ?? [];
+        $steps = $kronosWorkflowRun->workflow->definition['steps'] ?? [];
         $stepConfig = collect($steps)->firstWhere('name', $this->stepName);
 
         if (!$stepConfig || !isset($stepConfig['job'])) {
-            $orchestrator->onStepFailed($run, $this->stepName, 'Step job class not configured.');
+            $kronosOrchestrator->onStepFailed($kronosWorkflowRun, $this->stepName, 'Step job class not configured.');
 
             return;
         }
 
         $jobClass = $stepConfig['job'];
         $params = $stepConfig['params'] ?? [];
-        $context = new WorkflowContext($run);
+        $workflowContext = new WorkflowContext($kronosWorkflowRun);
 
         /** @var KronosStep $step */
         $step = app($jobClass, $params);
         $output = [];
 
         try {
-            $result = $step->handle($context);
+            $result = $step->handle($workflowContext);
             // Fix #17: flush dirty context writes in one DB round-trip after handle()
-            $context->flush();
+            $workflowContext->flush();
             if (is_array($result)) {
                 $output = $result;
             }
-        } catch (Throwable $e) {
-            $context->flush(); // persist partial context even on failure
+        } catch (Throwable $throwable) {
+            $workflowContext->flush(); // persist partial context even on failure
             $willRetry = $this->attempts() < $this->tries;
-            $orchestrator->onStepFailed($run, $this->stepName, $e->getMessage(), $willRetry);
+            $kronosOrchestrator->onStepFailed($kronosWorkflowRun, $this->stepName, $throwable->getMessage(), $willRetry);
 
             if ($willRetry) {
-                throw $e; // let Laravel retry
+                throw $throwable; // let Laravel retry
             }
 
             return;
         }
 
-        $orchestrator->onStepCompleted($run, $this->stepName, $output);
+        $kronosOrchestrator->onStepCompleted($kronosWorkflowRun, $this->stepName, $output);
     }
 
-    public function failed(Throwable $exception): void
+    public function failed(Throwable $throwable): void
     {
         $run = KronosWorkflowRun::find($this->runId);
         if ($run) {
             app(KronosOrchestrator::class)
-                ->onStepFailed($run, $this->stepName, $exception->getMessage(), false);
+                ->onStepFailed($run, $this->stepName, $throwable->getMessage(), false);
         }
     }
 }

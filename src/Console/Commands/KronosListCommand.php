@@ -26,7 +26,7 @@ class KronosListCommand extends Command
             $workflows = KronosWorkflow::all(['id', 'name', 'trigger_type', 'cron_expression', 'enabled']);
             $this->table(
                 ['ID', 'Name', 'Trigger', 'Cron', 'Enabled'],
-                $workflows->map(fn ($w) => [
+                $workflows->map(fn ($w): array => [
                     $w->id,
                     $w->name,
                     $w->trigger_type,
@@ -42,7 +42,7 @@ class KronosListCommand extends Command
             $tasks = KronosScheduledTask::all(['id', 'name', 'command', 'cron_expression', 'enabled']);
             $this->table(
                 ['ID', 'Name', 'Command', 'Cron', 'Enabled'],
-                $tasks->map(fn ($t) => [
+                $tasks->map(fn ($t): array => [
                     $t->id,
                     $t->name,
                     $t->command,
