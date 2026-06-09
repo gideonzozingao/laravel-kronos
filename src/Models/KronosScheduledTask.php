@@ -23,11 +23,11 @@ class KronosScheduledTask extends Model
     ];
 
     protected $casts = [
-        'enabled'             => 'boolean',
+        'enabled' => 'boolean',
         'without_overlapping' => 'boolean',
-        'on_one_server'       => 'boolean',
-        'run_in_background'   => 'boolean',
-        'meta'                => 'array',
+        'on_one_server' => 'boolean',
+        'run_in_background' => 'boolean',
+        'meta' => 'array',
     ];
 
     public function runs(): HasMany

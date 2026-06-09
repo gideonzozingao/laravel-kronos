@@ -5,12 +5,19 @@ namespace ZuqongTech\Kronos\DAG;
 class TriggerDefinition
 {
     protected string $type = 'manual';
+
     protected ?string $cronExpression = null;
+
     protected string $timezone = 'UTC';
+
     protected ?string $modelClass = null;
+
     protected ?string $modelEvent = null;
+
     protected ?string $laravelEvent = null;
+
     protected ?string $afterWorkflow = null;
+
     protected ?string $webhookPath = null;
 
     public function __construct(protected WorkflowDefinition $workflow) {}
@@ -22,6 +29,7 @@ class TriggerDefinition
     {
         $this->type = 'cron';
         $this->cronExpression = $expression;
+
         return $this->workflow;
     }
 
@@ -31,6 +39,7 @@ class TriggerDefinition
     public function timezone(string $tz): static
     {
         $this->timezone = $tz;
+
         return $this;
     }
 
@@ -42,6 +51,7 @@ class TriggerDefinition
         $this->type = 'model_event';
         $this->modelClass = $modelClass;
         $this->modelEvent = $event;
+
         return $this->workflow;
     }
 
@@ -52,6 +62,7 @@ class TriggerDefinition
     {
         $this->type = 'laravel_event';
         $this->laravelEvent = $eventClass;
+
         return $this->workflow;
     }
 
@@ -62,6 +73,7 @@ class TriggerDefinition
     {
         $this->type = 'workflow_completion';
         $this->afterWorkflow = $workflowName;
+
         return $this->workflow;
     }
 
@@ -72,6 +84,7 @@ class TriggerDefinition
     {
         $this->type = 'webhook';
         $this->webhookPath = $path;
+
         return $this->workflow;
     }
 
@@ -81,6 +94,7 @@ class TriggerDefinition
     public function manual(): WorkflowDefinition
     {
         $this->type = 'manual';
+
         return $this->workflow;
     }
 
@@ -102,14 +116,14 @@ class TriggerDefinition
     public function toArray(): array
     {
         return array_filter([
-            'type'             => $this->type,
-            'cron_expression'  => $this->cronExpression,
-            'timezone'         => $this->timezone,
-            'model_class'      => $this->modelClass,
-            'model_event'      => $this->modelEvent,
-            'laravel_event'    => $this->laravelEvent,
-            'after_workflow'   => $this->afterWorkflow,
-            'webhook_path'     => $this->webhookPath,
+            'type' => $this->type,
+            'cron_expression' => $this->cronExpression,
+            'timezone' => $this->timezone,
+            'model_class' => $this->modelClass,
+            'model_event' => $this->modelEvent,
+            'laravel_event' => $this->laravelEvent,
+            'after_workflow' => $this->afterWorkflow,
+            'webhook_path' => $this->webhookPath,
         ]);
     }
 }

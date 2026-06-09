@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Redis;
 class RedisConfigStore
 {
     protected const KEY = 'kronos:config';
+
     protected const CHANNEL = 'kronos:invalidate';
 
     /**
@@ -26,7 +27,7 @@ class RedisConfigStore
         $raw = Redis::connection(config('kronos.redis_connection', 'default'))
             ->get(self::KEY);
 
-        return $raw ? json_decode($raw, true) : [];
+        return $raw ? json_decode((string) $raw, true) : [];
     }
 
     /**

@@ -22,10 +22,10 @@ class KronosWorkflowRun extends Model
     ];
 
     protected $casts = [
-        'context'     => 'array',
-        'started_at'  => 'datetime',
+        'context' => 'array',
+        'started_at' => 'datetime',
         'finished_at' => 'datetime',
-        'status'      => RunStatus::class,
+        'status' => RunStatus::class,
     ];
 
     public function workflow(): BelongsTo
@@ -52,6 +52,7 @@ class KronosWorkflowRun extends Model
         if (!$this->started_at || !$this->finished_at) {
             return null;
         }
+
         return $this->started_at->diffInSeconds($this->finished_at);
     }
 

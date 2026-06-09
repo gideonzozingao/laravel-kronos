@@ -8,70 +8,79 @@ class WorkflowContext
 {
     protected array $data = [];
 
+    // Fix #17: dirty flag — batch all set() calls into a single flush()
+    protected bool $dirty = false;
+
     public function __construct(protected KronosWorkflowRun $run)
     {
         $this->data = $run->context ?? [];
     }
 
-    /**
-     * Get a value from the shared context.
-     */
+    /** Read a value from the shared context. */
     public function get(string $key, mixed $default = null): mixed
     {
         return data_get($this->data, $key, $default);
     }
 
-    /**
-     * Set a value in the shared context and persist immediately.
-     */
+    /** Write a value — queued for flush, not immediately persisted. */
     public function set(string $key, mixed $value): static
     {
         data_set($this->data, $key, $value);
-        $this->persist();
+        $this->dirty = true;
+
         return $this;
     }
 
-    /**
-     * Merge an array of key-value pairs into context.
-     */
+    /** Bulk-write — queued for flush. */
     public function merge(array $values): static
     {
         $this->data = array_merge($this->data, $values);
-        $this->persist();
+        $this->dirty = true;
+
         return $this;
     }
 
-    /**
-     * Check if a key exists in context.
-     */
+    /** Check existence. */
     public function has(string $key): bool
     {
         return array_key_exists($key, $this->data);
     }
 
-    /**
-     * Forget a key from context.
-     */
+    /** Remove a key — queued for flush. */
     public function forget(string $key): static
     {
         unset($this->data[$key]);
-        $this->persist();
+        $this->dirty = true;
+
         return $this;
     }
 
-    /**
-     * Get all context data.
-     */
+    /** Get all context data. */
     public function all(): array
     {
         return $this->data;
     }
 
     /**
-     * Persist the context back to the workflow run record.
+     * Persist dirty data to DB in a single UPDATE.
+     * Called by ExecuteWorkflowStep after handle() completes or fails —
+     * not on every individual set() call.
      */
-    protected function persist(): void
+    public function flush(): void
+    {
+        if ($this->dirty) {
+            $this->run->update(['context' => $this->data]);
+            $this->dirty = false;
+        }
+    }
+
+    /**
+     * Force an immediate persist regardless of dirty flag.
+     * Useful for long-running steps that want mid-step checkpointing.
+     */
+    public function checkpoint(): void
     {
         $this->run->update(['context' => $this->data]);
+        $this->dirty = false;
     }
 }

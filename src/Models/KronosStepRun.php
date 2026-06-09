@@ -2,12 +2,16 @@
 
 namespace ZuqongTech\Kronos\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use ZuqongTech\Kronos\Database\Factories\KronosStepRunFactory;
 use ZuqongTech\Kronos\Enums\StepStatus;
 
 class KronosStepRun extends Model
 {
+    use HasFactory; // Fix #21
+
     protected $table = 'kronos_step_runs';
 
     protected $fillable = [
@@ -22,11 +26,16 @@ class KronosStepRun extends Model
     ];
 
     protected $casts = [
-        'output'      => 'array',
-        'started_at'  => 'datetime',
+        'output' => 'array',
+        'started_at' => 'datetime',
         'finished_at' => 'datetime',
-        'status'      => StepStatus::class,
+        'status' => StepStatus::class,
     ];
+
+    protected static function newFactory(): KronosStepRunFactory
+    {
+        return KronosStepRunFactory::new();
+    }
 
     public function run(): BelongsTo
     {
@@ -38,6 +47,12 @@ class KronosStepRun extends Model
         if (!$this->started_at || !$this->finished_at) {
             return null;
         }
+
         return $this->started_at->diffInSeconds($this->finished_at);
+    }
+
+    public function isSuccessful(): bool
+    {
+        return $this->status === StepStatus::Completed;
     }
 }

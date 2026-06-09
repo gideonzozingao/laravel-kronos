@@ -2,11 +2,12 @@
 
 namespace ZuqongTech\Kronos\Http\Controllers;
 
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use ZuqongTech\Kronos\Engine\KronosOrchestrator;
-use ZuqongTech\Kronos\Exceptions\KronosWorkflowNotFoundException;
+use ZuqongTech\Kronos\Models\KronosWorkflowRun;
 
 class KronosWebhookController extends Controller
 {
@@ -29,7 +30,7 @@ class KronosWebhookController extends Controller
 
         try {
             $runId = $this->orchestrator->trigger($workflow, $context);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
+        } catch (ModelNotFoundException) {
             return response()->json(['error' => "Workflow [{$workflow}] not found or disabled."], 404);
         } catch (\Throwable $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -37,7 +38,7 @@ class KronosWebhookController extends Controller
 
         return response()->json([
             'message' => 'Workflow triggered.',
-            'run_id'  => $runId,
+            'run_id' => $runId,
         ]);
     }
 
@@ -53,7 +54,7 @@ class KronosWebhookController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        $run = \ZuqongTech\Kronos\Models\KronosWorkflowRun::with(['workflow', 'stepRuns'])
+        $run = KronosWorkflowRun::with(['workflow', 'stepRuns'])
             ->where('run_id', $runId)
             ->first();
 
@@ -62,20 +63,20 @@ class KronosWebhookController extends Controller
         }
 
         return response()->json([
-            'run_id'      => $run->run_id,
-            'workflow'    => $run->workflow->name,
-            'status'      => $run->status->value,
-            'started_at'  => $run->started_at?->toIso8601String(),
+            'run_id' => $run->run_id,
+            'workflow' => $run->workflow->name,
+            'status' => $run->status->value,
+            'started_at' => $run->started_at?->toIso8601String(),
             'finished_at' => $run->finished_at?->toIso8601String(),
-            'duration'    => $run->duration,
-            'context'     => $run->context,
-            'steps'       => $run->stepRuns->map(fn ($s) => [
-                'name'        => $s->step_name,
-                'status'      => $s->status->value,
-                'attempt'     => $s->attempt,
-                'duration'    => $s->duration,
-                'output'      => $s->output,
-                'exception'   => $s->exception,
+            'duration' => $run->duration,
+            'context' => $run->context,
+            'steps' => $run->stepRuns->map(fn ($s) => [
+                'name' => $s->step_name,
+                'status' => $s->status->value,
+                'attempt' => $s->attempt,
+                'duration' => $s->duration,
+                'output' => $s->output,
+                'exception' => $s->exception,
             ]),
         ]);
     }

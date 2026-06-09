@@ -1,7 +1,9 @@
 <?php
 
+use Orchestra\Testbench\TestCase;
+
 uses(
-    \Orchestra\Testbench\TestCase::class,
+    TestCase::class,
 )->in('Feature', 'Unit');
 
 /*

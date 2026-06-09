@@ -2,12 +2,15 @@
 
 namespace ZuqongTech\Kronos\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use ZuqongTech\Kronos\Enums\RunStatus;
+use ZuqongTech\Kronos\Database\Factories\KronosWorkflowFactory;
 
 class KronosWorkflow extends Model
 {
+    use HasFactory; // Fix #21
+
     protected $table = 'kronos_workflows';
 
     protected $fillable = [
@@ -21,8 +24,13 @@ class KronosWorkflow extends Model
 
     protected $casts = [
         'definition' => 'array',
-        'enabled'    => 'boolean',
+        'enabled' => 'boolean',
     ];
+
+    protected static function newFactory(): KronosWorkflowFactory
+    {
+        return KronosWorkflowFactory::new();
+    }
 
     public function runs(): HasMany
     {

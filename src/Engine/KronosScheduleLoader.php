@@ -3,7 +3,9 @@
 namespace ZuqongTech\Kronos\Engine;
 
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Support\Facades\Http;
 use Symfony\Component\Yaml\Yaml;
+use Throwable;
 use ZuqongTech\Kronos\Writers\RedisConfigStore;
 
 class KronosScheduleLoader
@@ -45,9 +47,10 @@ class KronosScheduleLoader
                 $event->runInBackground();
             }
 
-            if ($entry['on_failure_webhook'] ?? null) {
-                $webhook = $entry['on_failure_webhook'];
-                $event->onFailure(fn () => rescue(fn () => \Http::post($webhook, ['entry' => $entry])));
+            if ($webhook = ($entry['on_failure_webhook'] ?? null)) {
+                $event->onFailure(
+                    fn () => rescue(fn () => Http::post($webhook, ['entry' => $entry])),
+                );
             }
         }
     }
@@ -65,13 +68,12 @@ class KronosScheduleLoader
                 continue;
             }
 
-            $event = $schedule->call(function () use ($workflow) {
-                app(\ZuqongTech\Kronos\Engine\KronosOrchestrator::class)
-                    ->trigger($workflow['name']);
+            $event = $schedule->call(function () use ($workflow): void {
+                app(KronosOrchestrator::class)->trigger($workflow['name']);
             })
-            ->cron($trigger['cron_expression'])
-            ->timezone($trigger['timezone'] ?? 'UTC')
-            ->name("kronos:workflow:{$workflow['name']}");
+                ->cron($trigger['cron_expression'])
+                ->timezone($trigger['timezone'] ?? 'UTC')
+                ->name("kronos:workflow:{$workflow['name']}");
 
             if (config('kronos.multi_node', false)) {
                 $event->onOneServer();
@@ -80,18 +82,24 @@ class KronosScheduleLoader
     }
 
     /**
-     * Load the canonical config — prefers Redis, falls back to YAML file.
+     * Load canonical config — prefers Redis, falls back to YAML file.
+     *
+     * Fix #10: Redis failure is caught; YAML is the fallback, not a crash.
      */
     protected function loadConfig(): array
     {
         // Try Redis first (multi-node canonical store)
-        $fromRedis = $this->redis->load();
-        if (!empty($fromRedis)) {
-            return $fromRedis;
+        try {
+            $fromRedis = $this->redis->load();
+            if (!empty($fromRedis)) {
+                return $fromRedis;
+            }
+        } catch (Throwable) {
+            // Redis unavailable — fall through to YAML
         }
 
-        // Fall back to YAML file
         $path = config('kronos.config_path', storage_path('kronos.yaml'));
+
         if (!file_exists($path)) {
             return [];
         }

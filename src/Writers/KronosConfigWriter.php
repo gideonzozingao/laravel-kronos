@@ -15,58 +15,50 @@ class KronosConfigWriter
     ) {}
 
     /**
-     * Rebuild the full config from the current DB state and write everywhere.
-     * This is the single write point — always called via the unique queue job.
+     * Rebuild the full config from current DB state and write to YAML + Redis.
+     * This is always called via the unique queue job — never inline.
      */
     public function rebuildFromDatabase(): void
     {
         $lock = Cache::lock('kronos:config:write', 15);
 
-        $lock->block(10, function () {
-            // 1. Get schedule entries from rule engine
+        $lock->block(10, function (): void {
             $ruleConfig = $this->ruleEngine->buildFullConfig();
 
-            // 2. Get workflow definitions from DB
             $workflows = KronosWorkflow::where('enabled', true)
                 ->get()
-                ->map(fn ($wf) => array_merge(
-                    $wf->definition,
-                    [
-                        'id'      => $wf->id,
-                        'name'    => $wf->name,
-                        'enabled' => $wf->enabled,
-                    ]
-                ))
+                ->map(fn ($wf) => array_merge($wf->definition, [
+                    'id' => $wf->id,
+                    'name' => $wf->name,
+                    'enabled' => $wf->enabled,
+                ]))
                 ->toArray();
 
             $payload = [
-                'version'      => 1,
+                'version' => 1,
                 'generated_at' => now()->toIso8601String(),
-                'schedules'    => $ruleConfig['schedules'],
-                'workflows'    => array_merge($ruleConfig['workflows'], $workflows),
+                'schedules' => $ruleConfig['schedules'],
+                'workflows' => array_merge($ruleConfig['workflows'], $workflows),
             ];
 
-            // 3. Write to YAML file (atomically)
             $this->writeYaml($payload);
-
-            // 4. Write to Redis (for multi-node sync)
             $this->redis->store($payload);
-
-            // 5. Broadcast cache invalidation to all nodes
             $this->redis->broadcastInvalidation();
         });
     }
 
     /**
-     * Write a single schedule entry (additive, no full rebuild).
+     * Additive upsert of a single schedule entry.
+     *
+     * Fix #11: broadcastInvalidation() added so other nodes are notified.
      */
     public function writeScheduleEntry(array $entry): void
     {
         $config = $this->loadCurrent();
         $config['schedules'] ??= [];
 
-        // Upsert by ID
         $existing = collect($config['schedules'])->firstWhere('id', $entry['id'] ?? null);
+
         if ($existing) {
             $config['schedules'] = collect($config['schedules'])
                 ->map(fn ($s) => ($s['id'] ?? null) === $entry['id'] ? $entry : $s)
@@ -79,14 +71,18 @@ class KronosConfigWriter
 
         $this->writeYaml($config);
         $this->redis->store($config);
+        $this->redis->broadcastInvalidation(); // Fix #11
     }
 
     /**
      * Remove a schedule entry by ID.
+     *
+     * Fix #11: broadcastInvalidation() added.
      */
     public function removeScheduleEntry(int|string $id): void
     {
         $config = $this->loadCurrent();
+
         $config['schedules'] = collect($config['schedules'] ?? [])
             ->reject(fn ($s) => ($s['id'] ?? null) == $id)
             ->values()
@@ -96,15 +92,16 @@ class KronosConfigWriter
 
         $this->writeYaml($config);
         $this->redis->store($config);
+        $this->redis->broadcastInvalidation(); // Fix #11
     }
 
     /**
-     * Atomic YAML write — writes to temp file then renames (prevents partial reads).
+     * Atomic YAML write — write to .tmp then rename() to prevent partial reads.
      */
     protected function writeYaml(array $payload): void
     {
         $path = config('kronos.config_path', storage_path('kronos.yaml'));
-        $tmp = $path . '.tmp.' . getmypid();
+        $tmp = $path.'.tmp.'.getmypid();
 
         file_put_contents($tmp, Yaml::dump($payload, 4, 2));
         rename($tmp, $path);

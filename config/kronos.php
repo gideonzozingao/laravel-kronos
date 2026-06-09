@@ -40,7 +40,7 @@ return [
     */
     'queue' => [
         'connection' => env('KRONOS_QUEUE_CONNECTION', 'redis'),
-        'name'       => env('KRONOS_QUEUE_NAME', 'kronos'),
+        'name' => env('KRONOS_QUEUE_NAME', 'kronos'),
     ],
 
     /*
@@ -52,8 +52,8 @@ return [
     */
     'webhook' => [
         'enabled' => env('KRONOS_WEBHOOK_ENABLED', false),
-        'secret'  => env('KRONOS_WEBHOOK_SECRET'),
-        'prefix'  => env('KRONOS_WEBHOOK_PREFIX', 'kronos'),
+        'secret' => env('KRONOS_WEBHOOK_SECRET'),
+        'prefix' => env('KRONOS_WEBHOOK_PREFIX', 'kronos'),
     ],
 
     /*
@@ -72,10 +72,10 @@ return [
     | Configuration for the optional Kronos Filament UI plugin.
     */
     'filament' => [
-        'enabled'    => env('KRONOS_FILAMENT_ENABLED', true),
-        'panel_id'   => env('KRONOS_FILAMENT_PANEL', 'admin'),
-        'nav_group'  => 'Kronos',
-        'nav_sort'   => 90,
+        'enabled' => env('KRONOS_FILAMENT_ENABLED', true),
+        'panel_id' => env('KRONOS_FILAMENT_PANEL', 'admin'),
+        'nav_group' => 'Kronos',
+        'nav_sort' => 90,
     ],
 
     /*

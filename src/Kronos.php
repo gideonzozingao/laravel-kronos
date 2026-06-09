@@ -2,7 +2,6 @@
 
 namespace ZuqongTech\Kronos;
 
-use Closure;
 use ZuqongTech\Kronos\DAG\WorkflowDefinition;
 use ZuqongTech\Kronos\Engine\KronosOrchestrator;
 use ZuqongTech\Kronos\Engine\KronosRuleEngine;
@@ -29,6 +28,7 @@ class Kronos
     {
         $rule = new KronosRule($name, $this->ruleEngine, $this->writer);
         $this->ruleEngine->register($rule);
+
         return $rule;
     }
 

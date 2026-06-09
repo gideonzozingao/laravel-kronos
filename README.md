@@ -1,7 +1,7 @@
 # ⏱ Laravel Kronos
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/zuqongtech/laravel-kronos.svg?style=flat-square)](https://packagist.org/packages/zuqongtech/laravel-kronos)
-[![Total Downloads](https://img.shields.io/packagist/dt/zuqongtech/laravel-kronos.svg?style=flat-square)](https://packagist.org/packages/zuqongtech/laravel-kronos)
+[![Total Downloads](https://img.shields.io/packagist/dt/zuqongtech/laravel-kronos.svg?style=flat-square)](https://packagist.org/packages/zuqongtech/laravel-kronos) 
 [![Tests](https://img.shields.io/github/actions/workflow/status/zuqongtech/laravel-kronos/tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/zuqongtech/laravel-kronos/actions/workflows/tests.yml)
 [![PHPStan](https://img.shields.io/github/actions/workflow/status/zuqongtech/laravel-kronos/phpstan.yml?branch=main&label=phpstan&style=flat-square)](https://github.com/zuqongtech/laravel-kronos/actions)
 [![PHP Version](https://img.shields.io/badge/php-%5E8.2-blue?style=flat-square)](https://php.net)

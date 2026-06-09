@@ -11,8 +11,9 @@ class DAGResolver
      * Steps within the same batch can run in parallel.
      * Uses Kahn's algorithm for topological sort.
      *
-     * @param  array<string, array{depends_on: string[]}> $steps
+     * @param  array<string, array{depends_on: string[]}>  $steps
      * @return array<int, string[]> Ordered batches of step names
+     *
      * @throws KronosDeadlockException
      */
     public function resolve(array $steps): array
@@ -55,7 +56,7 @@ class DAGResolver
         if ($processed !== count($steps)) {
             $cycle = array_keys(array_filter($inDegree, fn ($deg) => $deg > 0));
             throw new KronosDeadlockException(
-                'Circular dependency detected in workflow DAG. Affected steps: ' . implode(', ', $cycle)
+                'Circular dependency detected in workflow DAG. Affected steps: '.implode(', ', $cycle),
             );
         }
 
@@ -65,9 +66,9 @@ class DAGResolver
     /**
      * Get all steps that are ready to execute given the set of completed steps.
      *
-     * @param  array<string, array{depends_on: string[]}> $allSteps
-     * @param  string[] $completedSteps
-     * @param  string[] $runningSteps
+     * @param  array<string, array{depends_on: string[]}>  $allSteps
+     * @param  string[]  $completedSteps
+     * @param  string[]  $runningSteps
      * @return string[]
      */
     public function getReadySteps(array $allSteps, array $completedSteps, array $runningSteps = []): array
@@ -98,6 +99,7 @@ class DAGResolver
     public function validate(array $steps): bool
     {
         $this->resolve($steps); // throws if invalid
+
         return true;
     }
 }

@@ -3,18 +3,29 @@
 namespace ZuqongTech\Kronos\DAG;
 
 use Closure;
+use InvalidArgumentException;
+use ZuqongTech\Kronos\Contracts\KronosStep;
 
 class StepDefinition
 {
     protected string $jobClass;
+
     protected array $dependsOn = [];
-    protected int $retries = 0;
-    protected int $retryDelay = 60;      // seconds
-    protected int $timeout = 3600;       // seconds
+
+    protected int $retries = 1;
+
+    protected int $retryDelay = 60;
+
+    protected int $timeout = 3600;
+
     protected bool $isParallel = false;
+
     protected ?Closure $onFailure = null;
+
     protected ?Closure $onSuccess = null;
-    protected ?string $condition = null; // context key condition for skip logic
+
+    protected ?string $condition = null;
+
     protected array $params = [];
 
     public function __construct(
@@ -24,81 +35,87 @@ class StepDefinition
 
     /**
      * Set the job class to execute for this step.
+     *
+     * Fix #19: validates class exists and implements KronosStep at definition time.
      */
     public function run(string $jobClass, array $params = []): static
     {
+        if (!class_exists($jobClass)) {
+            throw new InvalidArgumentException(
+                "Step [{$this->name}]: job class [{$jobClass}] does not exist.",
+            );
+        }
+
+        if (!is_a($jobClass, KronosStep::class, true)) {
+            throw new InvalidArgumentException(
+                "Step [{$this->name}]: [{$jobClass}] must implement ".KronosStep::class.'.',
+            );
+        }
+
         $this->jobClass = $jobClass;
         $this->params = $params;
+
         return $this;
     }
 
-    /**
-     * Declare upstream step dependencies.
-     */
+    /** Declare upstream step dependencies. */
     public function after(string ...$stepNames): static
     {
         $this->dependsOn = array_merge($this->dependsOn, $stepNames);
+
         return $this;
     }
 
-    /**
-     * Set number of retry attempts on failure.
-     */
+    /** Set number of retry attempts on failure. */
     public function retries(int $count, int $delaySeconds = 60): static
     {
-        $this->retries = $count;
+        $this->retries = max(1, $count);
         $this->retryDelay = $delaySeconds;
+
         return $this;
     }
 
-    /**
-     * Set step execution timeout in seconds.
-     */
+    /** Set step execution timeout in seconds. */
     public function timeout(int $seconds): static
     {
         $this->timeout = $seconds;
+
         return $this;
     }
 
-    /**
-     * Mark this step as part of a parallel group.
-     */
+    /** Mark this step as part of a parallel group. */
     public function parallel(bool $flag = true): static
     {
         $this->isParallel = $flag;
+
         return $this;
     }
 
-    /**
-     * Skip this step if a context condition evaluates to false.
-     */
+    /** Skip this step if a context key evaluates to falsy. */
     public function skipUnless(string $contextKey): static
     {
         $this->condition = $contextKey;
+
         return $this;
     }
 
-    /**
-     * Step-level failure callback.
-     */
+    /** Step-level failure callback. */
     public function onFailure(Closure $callback): static
     {
         $this->onFailure = $callback;
+
         return $this;
     }
 
-    /**
-     * Step-level success callback.
-     */
+    /** Step-level success callback. */
     public function onSuccess(Closure $callback): static
     {
         $this->onSuccess = $callback;
+
         return $this;
     }
 
-    /**
-     * Return to the parent workflow for chaining.
-     */
+    /** Return to parent workflow for chaining. */
     public function workflow(): WorkflowDefinition
     {
         return $this->workflow;
@@ -152,15 +169,15 @@ class StepDefinition
     public function toArray(): array
     {
         return [
-            'name'        => $this->name,
-            'job'         => $this->jobClass ?? null,
-            'params'      => $this->params,
-            'depends_on'  => $this->dependsOn,
-            'retries'     => $this->retries,
+            'name' => $this->name,
+            'job' => $this->jobClass ?? null,
+            'params' => $this->params,
+            'depends_on' => $this->dependsOn,
+            'retries' => $this->retries,
             'retry_delay' => $this->retryDelay,
-            'timeout'     => $this->timeout,
-            'parallel'    => $this->isParallel,
-            'condition'   => $this->condition,
+            'timeout' => $this->timeout,
+            'parallel' => $this->isParallel,
+            'condition' => $this->condition,
         ];
     }
 }

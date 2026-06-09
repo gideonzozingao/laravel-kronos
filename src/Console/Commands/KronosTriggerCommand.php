@@ -8,6 +8,7 @@ use ZuqongTech\Kronos\Engine\KronosOrchestrator;
 class KronosTriggerCommand extends Command
 {
     protected $signature = 'kronos:trigger {workflow : Workflow name} {--context= : JSON context to inject}';
+
     protected $description = 'Manually trigger a Kronos workflow';
 
     public function handle(KronosOrchestrator $orchestrator): int

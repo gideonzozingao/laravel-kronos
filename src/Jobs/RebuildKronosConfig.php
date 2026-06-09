@@ -9,7 +9,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use ZuqongTech\Kronos\Writers\KronosConfigWriter;
 
-class RebuildKronosConfig implements ShouldQueue, ShouldBeUnique
+class RebuildKronosConfig implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable;
 

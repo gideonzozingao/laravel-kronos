@@ -3,15 +3,15 @@
 use ZuqongTech\Kronos\DAG\DAGResolver;
 use ZuqongTech\Kronos\Exceptions\KronosDeadlockException;
 
-describe('DAGResolver', function () {
+describe('DAGResolver', function (): void {
 
-    it('resolves a linear chain into sequential batches', function () {
-        $resolver = new DAGResolver();
+    it('resolves a linear chain into sequential batches', function (): void {
+        $resolver = new DAGResolver;
 
         $steps = [
-            'validate'  => ['depends_on' => []],
+            'validate' => ['depends_on' => []],
             'calculate' => ['depends_on' => ['validate']],
-            'notify'    => ['depends_on' => ['calculate']],
+            'notify' => ['depends_on' => ['calculate']],
         ];
 
         $batches = $resolver->resolve($steps);
@@ -22,14 +22,14 @@ describe('DAGResolver', function () {
             ->and($batches[2])->toBe(['notify']);
     });
 
-    it('groups parallel steps into a single batch', function () {
-        $resolver = new DAGResolver();
+    it('groups parallel steps into a single batch', function (): void {
+        $resolver = new DAGResolver;
 
         $steps = [
-            'validate'   => ['depends_on' => []],
+            'validate' => ['depends_on' => []],
             'statements' => ['depends_on' => ['validate']],
-            'reports'    => ['depends_on' => ['validate']],
-            'notify'     => ['depends_on' => ['statements', 'reports']],
+            'reports' => ['depends_on' => ['validate']],
+            'notify' => ['depends_on' => ['statements', 'reports']],
         ];
 
         $batches = $resolver->resolve($steps);
@@ -40,8 +40,8 @@ describe('DAGResolver', function () {
             ->and($batches[2])->toBe(['notify']);
     });
 
-    it('resolves steps with no dependencies as the first batch together', function () {
-        $resolver = new DAGResolver();
+    it('resolves steps with no dependencies as the first batch together', function (): void {
+        $resolver = new DAGResolver;
 
         $steps = [
             'step_a' => ['depends_on' => []],
@@ -55,8 +55,8 @@ describe('DAGResolver', function () {
             ->and($batches[1])->toBe(['step_c']);
     });
 
-    it('throws KronosDeadlockException on circular dependency', function () {
-        $resolver = new DAGResolver();
+    it('throws KronosDeadlockException on circular dependency', function (): void {
+        $resolver = new DAGResolver;
 
         $steps = [
             'step_a' => ['depends_on' => ['step_c']],
@@ -68,14 +68,14 @@ describe('DAGResolver', function () {
             ->toThrow(KronosDeadlockException::class);
     });
 
-    it('returns ready steps given completed set', function () {
-        $resolver = new DAGResolver();
+    it('returns ready steps given completed set', function (): void {
+        $resolver = new DAGResolver;
 
         $steps = [
-            'validate'   => ['depends_on' => []],
-            'calculate'  => ['depends_on' => ['validate']],
+            'validate' => ['depends_on' => []],
+            'calculate' => ['depends_on' => ['validate']],
             'statements' => ['depends_on' => ['validate']],
-            'notify'     => ['depends_on' => ['calculate', 'statements']],
+            'notify' => ['depends_on' => ['calculate', 'statements']],
         ];
 
         $ready = $resolver->getReadySteps($steps, ['validate'], []);
@@ -84,11 +84,11 @@ describe('DAGResolver', function () {
             ->and($ready)->not->toContain('notify');
     });
 
-    it('does not return running steps as ready', function () {
-        $resolver = new DAGResolver();
+    it('does not return running steps as ready', function (): void {
+        $resolver = new DAGResolver;
 
         $steps = [
-            'validate'  => ['depends_on' => []],
+            'validate' => ['depends_on' => []],
             'calculate' => ['depends_on' => ['validate']],
         ];
 
@@ -97,8 +97,8 @@ describe('DAGResolver', function () {
         expect($ready)->toBeEmpty();
     });
 
-    it('handles a single step with no dependencies', function () {
-        $resolver = new DAGResolver();
+    it('handles a single step with no dependencies', function (): void {
+        $resolver = new DAGResolver;
 
         $steps = ['only_step' => ['depends_on' => []]];
         $batches = $resolver->resolve($steps);
@@ -107,8 +107,8 @@ describe('DAGResolver', function () {
             ->and($batches[0])->toBe(['only_step']);
     });
 
-    it('handles empty steps', function () {
-        $resolver = new DAGResolver();
+    it('handles empty steps', function (): void {
+        $resolver = new DAGResolver;
         $batches = $resolver->resolve([]);
         expect($batches)->toBeEmpty();
     });

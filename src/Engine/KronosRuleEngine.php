@@ -11,9 +11,7 @@ class KronosRuleEngine
     /** @var KronosRule[] */
     protected array $rules = [];
 
-    /**
-     * Register a rule with the engine.
-     */
+    /** Register a rule with the engine. */
     public function register(KronosRule $rule): void
     {
         $this->rules[$rule->name] = $rule;
@@ -31,35 +29,27 @@ class KronosRuleEngine
             if (!in_array($event, $rule->getWatchEvents())) {
                 continue;
             }
-
             if ($rule->evaluate($model)) {
                 $matched = true;
-                break; // One match is enough to trigger a rebuild
+                break;
             }
         }
 
         if ($matched) {
-            // ShouldBeUnique ensures rapid DB changes collapse into a single rebuild
             RebuildKronosConfig::dispatch();
         }
     }
 
-    /**
-     * Get all rules that match a given model class.
-     */
+    /** @return KronosRule[] */
     public function rulesForModel(string $modelClass): array
     {
         return array_filter(
             $this->rules,
-            fn (KronosRule $rule) => $rule->getModelClass() === $modelClass
+            fn (KronosRule $rule) => $rule->getModelClass() === $modelClass,
         );
     }
 
-    /**
-     * Get all registered rules.
-     *
-     * @return KronosRule[]
-     */
+    /** @return KronosRule[] */
     public function all(): array
     {
         return $this->rules;
@@ -67,6 +57,9 @@ class KronosRuleEngine
 
     /**
      * Build the full config payload from all rules + current DB state.
+     *
+     * Fix #7: uses chunk() instead of ::all() to prevent full table scans
+     * on large watched tables.
      */
     public function buildFullConfig(): array
     {
@@ -76,17 +69,19 @@ class KronosRuleEngine
         foreach ($this->rules as $rule) {
             $modelClass = $rule->getModelClass();
 
-            $modelClass::all()->each(function ($model) use ($rule, &$schedules, &$workflows) {
-                if (!$rule->evaluate($model)) {
-                    return;
-                }
+            $modelClass::chunk(200, function ($models) use ($rule, &$schedules, &$workflows): void {
+                foreach ($models as $model) {
+                    if (!$rule->evaluate($model)) {
+                        continue;
+                    }
 
-                $payload = $rule->produce($model);
+                    $payload = $rule->produce($model);
 
-                if (isset($payload['steps'])) {
-                    $workflows[] = $payload;
-                } else {
-                    $schedules[] = $payload;
+                    if (isset($payload['steps'])) {
+                        $workflows[] = $payload;
+                    } else {
+                        $schedules[] = $payload;
+                    }
                 }
             });
         }

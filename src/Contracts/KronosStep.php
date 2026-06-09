@@ -14,5 +14,5 @@ interface KronosStep
      *
      * Return an array to store as step output, or void.
      */
-    public function handle(WorkflowContext $context): array|null;
+    public function handle(WorkflowContext $context): ?array;
 }

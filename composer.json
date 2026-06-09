@@ -28,16 +28,19 @@
         "illuminate/redis": "^11.0|^12.0"
     },
     "require-dev": {
-        "orchestra/testbench": "^9.0|^10.0",
-        "pestphp/pest": "^2.0|^3.0",
-        "pestphp/pest-plugin-laravel": "^2.0|^3.0",
-        "filament/filament": "^3.0",
-        "mockery/mockery": "^1.6"
+        "larastan/larastan": "^3.0",
+        "laravel/pint": "^1.0",
+        "mockery/mockery": "^1.6",
+        "orchestra/testbench": "^10.0",
+        "pestphp/pest": "^3.0",
+        "pestphp/pest-plugin-laravel": "^3.0",
+        "rector/rector": "^2.4",
+        "driftingly/rector-laravel": "^2.5"
     },
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Zuqongtech\\LaravelKronos\\": "src/"
+            "ZuqongTech\\Kronos\\": "src/"
         }
     },
     "autoload-dev": {

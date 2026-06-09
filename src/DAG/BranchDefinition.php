@@ -7,6 +7,7 @@ use Closure;
 class BranchDefinition
 {
     protected array $arms = [];
+
     protected ?array $otherwiseSteps = null;
 
     public function __construct(protected WorkflowDefinition $workflow) {}
@@ -18,6 +19,7 @@ class BranchDefinition
     {
         $arm = new BranchArm($condition, $this);
         $this->arms[] = $arm;
+
         return $arm;
     }
 
@@ -29,6 +31,7 @@ class BranchDefinition
         $arm = new BranchArm(fn () => true, $this, isDefault: true);
         $this->otherwiseSteps = [];
         $this->arms[] = $arm;
+
         return $arm;
     }
 
